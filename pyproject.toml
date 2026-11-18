@@ -6,11 +6,11 @@ h5exporters = false  # true if plugin contains custom h5 file exporters
 scanners = false  # true if plugin contains custom scan layout (daq_scan extensions)
 
 [urls]
-package-url = 'https://github.com/PyMoDAQ/pymodaq_plugins_template' #todo modify url by your plugin url
+package-url = 'https://github.com/jerlfan/pymodaq_plugins_dilor'
 
 [project]
-name = "pymodaq_plugins_template" #todo modify template by your plugin short name
-description = 'some word about your plugin'
+name = "pymodaq_plugins_dilor"
+description = 'PyMoDAQ plugins for the Dilor spectrometers (Z40, XY): grating drive by a stepper motor, positioned on the reading of a HEIDENHAIN optical ruler.'
 dependencies = [
     "pymodaq>=5.3.7",
     "pymodaq_utils>=5.3.1",
@@ -20,12 +20,10 @@ dependencies = [
 ]
 
 authors = [
-    {name = "Name Surname", email = "myname@test.fr"},
-    #todo: list here all authors of your plugin
+    {name = "Jérémie Margueritat", email = "jeremie.margueritat@univ-lyon1.fr"},
 ]
 maintainers = [
-    {name = "Name Surname", email = "myname@test.fr"},
-    #todo: list here all maintainers of your plugin
+    {name = "Jérémie Margueritat", email = "jeremie.margueritat@univ-lyon1.fr"},
 ]
 
 # nottodo: leave everything below as is!
