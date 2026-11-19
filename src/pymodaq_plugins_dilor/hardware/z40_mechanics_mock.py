@@ -23,7 +23,8 @@ class Z40MechanicsMock:
 
     def initialize_stepper_motor(self, pulse_pin, direction_pin, enable_pin=7):
         """ Initialize the simulated stepper motor and set its position to 0 """
-        pass
+        self.stepper_motor = 0  # any value but None marks the motor as initialized, as in the Arduino class
+        self.position = 0
 
     def move_stepper_to_position(self, position: float, max_speed=200, acceleration=400):
         """ Start moving the simulated stepper motor to the specified position, without waiting for the end """
