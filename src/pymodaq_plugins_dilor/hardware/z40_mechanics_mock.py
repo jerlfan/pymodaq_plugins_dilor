@@ -20,11 +20,29 @@ class Z40MechanicsMock:
         self.backlash_mm = backlash_mm
         self.stepper_motor = None
         self.position = 0
+        self._screw_mm = 0.  # position of the screw, in mm of ruler
+        self._carriage_mm = 0.  # position of the carriage, i.e. true position of the ruler, in mm
 
     def initialize_stepper_motor(self, pulse_pin, direction_pin, enable_pin=7):
         """ Initialize the simulated stepper motor and set its position to 0 """
         self.stepper_motor = 0  # any value but None marks the motor as initialized, as in the Arduino class
         self.position = 0
+        if self.ruler is not None:
+            self._carriage_mm = self.ruler.position_mm
+        self._screw_mm = self._carriage_mm  # screw in the middle of the backlash
+
+    def _do_steps(self, steps: int):
+        """ Do steps with the simulated motor: turn the screw, which pushes the carriage once the backlash is taken
+        up, and give the carriage position to the ruler """
+        self.position += steps
+        self._screw_mm += self.direction * self.step_mm * steps
+        half_backlash = self.backlash_mm / 2
+        if self._screw_mm - self._carriage_mm > half_backlash:
+            self._carriage_mm = self._screw_mm - half_backlash
+        elif self._carriage_mm - self._screw_mm > half_backlash:
+            self._carriage_mm = self._screw_mm + half_backlash
+        if self.ruler is not None:
+            self.ruler.position_mm = self._carriage_mm
 
     def move_stepper_to_position(self, position: float, max_speed=200, acceleration=400):
         """ Start moving the simulated stepper motor to the specified position, without waiting for the end """
