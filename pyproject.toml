@@ -17,6 +17,7 @@ dependencies = [
     "pymodaq_gui>=5.3.0",
     "pymodaq_data>=5.3.0",
     "pymodaq_plugins_heidenhain",
+    "pymodaq_plugins_arduino>=5.3.1",
 ]
 
 authors = [
