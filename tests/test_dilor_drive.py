@@ -109,3 +109,26 @@ def test_take_up_backlash_timeout(ruler):
     drive = DilorDrive(MotorThatDoesNotMove(), ruler)
     with pytest.raises(TimeoutError):
         drive.take_up_backlash(timeout_s=0.1)
+
+
+def test_step_is_learned(mechanics, ruler):
+    """ With a starting step twice too large, the drive measures the true step on the ruler """
+    drive = make_drive(mechanics, ruler, step_mm=1e-3)
+    drive.take_up_backlash()
+    for shift_mm in [-0.1, -0.2, -0.3]:
+        run(drive, drive.get_position() + shift_mm)
+    assert drive.step_mm == pytest.approx(TRUE_STEP_MM, rel=0.05)
+    assert drive.status == 'reached'
+
+
+def test_step_learned_only_without_change_of_direction(mechanics, ruler):
+    """ The first move after a change of direction takes up the backlash: it is not used to measure the step. The next
+    move in the same direction is (internal methods of the drive) """
+    drive = make_drive(mechanics, ruler, step_mm=0.6e-3)
+    drive.take_up_backlash()  # positive steps
+    for expected_step_mm in [0.6e-3, 0.6e-3 + 0.5 * (TRUE_STEP_MM - 0.6e-3)]:
+        drive._send_steps(-100)  # the first time, a change of direction
+        while mechanics.get_stepper_position() != drive._motor_target:
+            time.sleep(0.01)
+        drive._learn_step()
+        assert drive.step_mm == pytest.approx(expected_step_mm, abs=1e-9)
