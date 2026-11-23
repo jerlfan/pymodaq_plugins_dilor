@@ -72,12 +72,7 @@ class DAQ_Move_Dilor(DAQ_Move_base):
     ] + comon_parameters_fun(axis_names=_axis_names)
 
     def ini_attributes(self):
-        #  TODO declare the type of the wrapper (and assign it to self.controller) you're going to use for easy
-        #  autocompletion
-        self.controller: PythonWrapperObjectOfYourInstrument = None
-
-        #TODO declare here attributes you want/need to init with a default value
-        pass
+        self.controller: DilorDrive = None
 
     def ini_stage(self, controller=None):
         """Actuator communication initialization
@@ -93,18 +88,32 @@ class DAQ_Move_Dilor(DAQ_Move_base):
         initialized: bool
             False if initialization failed otherwise True
         """
-        raise NotImplementedError  # TODO when writing your own plugin remove this line and modify the ones below
-        if self.is_master:  # is needed when controller is master
-            self.controller = PythonWrapperObjectOfYourInstrument()  # TODO add the arguments for the instantiation
-            initialized = self.controller.a_method_or_atttribute_to_check_if_init()  # todo
-            # todo: enter here whatever is needed for your controller initialization and eventual
-            #  opening of the communication channel
+        if self.is_master:
+            if self.settings['mode'] == 'MOCK':
+                ruler = IK220Mock()
+                motor = Z40MechanicsMock(ruler=ruler, step_mm=GlobalConfig()('dilor', 'mock', 'step_mm'),
+                                         backlash_mm=GlobalConfig()('dilor', 'mock', 'backlash_mm'))
+            else:
+                ruler = IK220(dllpath=GlobalConfig()('heidenhain', 'ik220', 'dll_path'),
+                              axis=GlobalConfig()('heidenhain', 'ik220', 'axis'))
+                motor = Arduino(com_port=self.settings['arduino', 'com_port'])
+            motor.initialize_stepper_motor(self.settings['arduino', 'pulse_pin'],
+                                           self.settings['arduino', 'direction_pin'],
+                                           self.settings['arduino', 'enable_pin'])
+            self.controller = DilorDrive(motor, ruler,
+                                         step_mm=self.settings['drive', 'step_mm'],
+                                         direction=self.settings['drive', 'direction'],
+                                         approach=self.settings['drive', 'approach'],
+                                         tolerance_mm=self.epsilon,
+                                         max_speed=self.settings['drive', 'max_speed'],
+                                         max_corrections=self.settings['drive', 'max_corrections'],
+                                         overshoot_steps=self.settings['drive', 'overshoot_steps'])
+            self.controller.take_up_backlash()
         else:
             self.controller = controller
-            initialized = True
 
-        info = "Whatever info you want to log"
-        return info, initialized
+        info = f"Dilor grating drive initialized in {self.settings['mode']} mode"
+        return info, True
 
     def close(self):
         """Terminate the communication protocol"""
