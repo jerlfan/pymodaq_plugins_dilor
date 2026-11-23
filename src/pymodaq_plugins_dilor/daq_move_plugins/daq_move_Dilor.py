@@ -190,12 +190,9 @@ class DAQ_Move_Dilor(DAQ_Move_base):
         self.move_done()
 
     def stop_motion(self):
-        """Stop the actuator and emits move_done signal"""
-
-        ## TODO for your custom plugin
-        raise NotImplementedError  # when writing your own plugin remove this line
-        self.controller.your_method_to_stop_positioning()  # when writing your own plugin replace this line
-        self.emit_status(ThreadCommand('Update_Status', ['Some info you want to log']))
+        """ Stop the actuator: the next polling sees the drive stopped and calls move_done """
+        self.controller.stop()
+        self.emit_status(ThreadCommand('Update_Status', ['Move stopped']))
 
     def commit_settings(self, param: Parameter):
         """Apply the consequences of a change of value in the detector settings
@@ -205,17 +202,9 @@ class DAQ_Move_Dilor(DAQ_Move_base):
         param: Parameter
             A given parameter (within detector_settings) whose value has been changed by the user
         """
-        ## TODO for your custom plugin
-        if param.name() == 'axis':
-            self.axis_unit = self.controller.your_method_to_get_correct_axis_unit()
-            # do this only if you can and if the units are not known beforehand, for instance
-            # if the motors connected to the controller are of different type (mm, µm, nm, , etc...)
-            # see BrushlessDCMotor from the thorlabs plugin for an exemple
-
-        elif param.name() == "a_parameter_you've_added_in_self.params":
-           self.controller.your_method_to_apply_this_param_change()
-        else:
-            pass
+        if param.parent().name() == 'drive' and self.controller is not None:
+            setattr(self.controller, param.name(), param.value())
+        # the mode and the Arduino settings are applied at the next initialization
 
 
 if __name__ == '__main__':
