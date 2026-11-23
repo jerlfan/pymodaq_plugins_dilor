@@ -33,6 +33,42 @@ class DAQ_Move_Dilor(DAQ_Move_base):
     has_encoder = True
 
     params = [
+        {'title': 'Mode:', 'name': 'mode', 'type': 'list', 'limits': ['MOCK', 'Z40'],
+         'value': GlobalConfig()('dilor', 'actuator', 'mode'),
+         'tip': 'MOCK: simulated mechanics and ruler, Z40: Arduino and IK 220 card '
+                '(applied at the next initialization)'},
+        {'title': 'Arduino', 'name': 'arduino', 'type': 'group', 'children': [
+            {'title': 'COM port:', 'name': 'com_port', 'type': 'list', 'limits': Arduino.COM_PORTS,
+             'value': GlobalConfig()('dilor', 'actuator', 'com_port')},
+            {'title': 'Pulse pin:', 'name': 'pulse_pin', 'type': 'int',
+             'value': GlobalConfig()('dilor', 'actuator', 'pulse_pin')},
+            {'title': 'Direction pin:', 'name': 'direction_pin', 'type': 'int',
+             'value': GlobalConfig()('dilor', 'actuator', 'direction_pin')},
+            {'title': 'Enable pin:', 'name': 'enable_pin', 'type': 'int',
+             'value': GlobalConfig()('dilor', 'actuator', 'enable_pin')},
+        ]},
+        {'title': 'Drive', 'name': 'drive', 'type': 'group', 'children': [
+            {'title': 'Step (mm):', 'name': 'step_mm', 'type': 'float', 'decimals': 6,
+             'value': GlobalConfig()('dilor', 'drive', 'step_mm'),
+             'tip': 'Displacement of the ruler for one motor step'},
+            {'title': 'Direction:', 'name': 'direction', 'type': 'list', 'limits': [-1, 1],
+             'value': GlobalConfig()('dilor', 'drive', 'direction'),
+             'tip': 'Sign of the ruler displacement for positive motor steps'},
+            {'title': 'Approach:', 'name': 'approach', 'type': 'list', 'limits': [-1, 1],
+             'value': GlobalConfig()('dilor', 'drive', 'approach'),
+             'tip': 'Sign of the motor steps used to reach the target'},
+            {'title': 'Speed (steps/s):', 'name': 'max_speed', 'type': 'int',
+             'value': GlobalConfig()('dilor', 'drive', 'max_speed')},
+            {'title': 'Max corrections:', 'name': 'max_corrections', 'type': 'int',
+             'value': GlobalConfig()('dilor', 'drive', 'max_corrections')},
+            {'title': 'Overshoot (steps):', 'name': 'overshoot_steps', 'type': 'int',
+             'value': GlobalConfig()('dilor', 'drive', 'overshoot_steps'),
+             'tip': 'Steps beyond a target that is behind, and steps of the backlash take up'},
+        ]},
+        {'title': 'Last move', 'name': 'last_move', 'type': 'group', 'children': [
+            {'title': 'Status:', 'name': 'status', 'type': 'str', 'value': '', 'readonly': True},
+            {'title': 'Corrections:', 'name': 'corrections', 'type': 'int', 'value': 0, 'readonly': True},
+        ]},
     ] + comon_parameters_fun(axis_names=_axis_names)
 
     def ini_attributes(self):
