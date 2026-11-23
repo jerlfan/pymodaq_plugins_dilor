@@ -1,72 +1,39 @@
-
-from typing import Union, List, Dict
 from pymodaq.control_modules.move_utility_classes import (DAQ_Move_base, comon_parameters_fun,
                                                           main, DataActuatorType, DataActuator)
 from pymodaq.control_modules.daq_move_ui.utils import UiType
-
-from pymodaq_utils.utils import ThreadCommand  # object used to send info back to the main thread
+from pymodaq_utils.config import GlobalConfig
+from pymodaq_utils.utils import ThreadCommand
 from pymodaq_gui.parameter import Parameter
 
-#  TODO:
-#  Replace the following fake import with the import of the real Python wrapper of your instrument. Here we suppose that
-#  the wrapper is in the hardware directory, but it could come from an external librairy like pylablib or pymeasure.
-from pymodaq_plugins_template.hardware.python_wrapper_file_of_your_instrument import PythonWrapperObjectOfYourInstrument
+from pymodaq_plugins_arduino.hardware.arduino_telemetrix import Arduino
+from pymodaq_plugins_heidenhain.hardware.ik220 import IK220
+from pymodaq_plugins_heidenhain.hardware.ik220_mock import IK220Mock
 
-# TODO:
-# (1) change the name of the following class to DAQ_Move_TheNameOfYourChoice
-# (2) change the name of this file to daq_move_TheNameOfYourChoice ("TheNameOfYourChoice" should be the SAME
-#     for the class name and the file name.)
-# (3) this file should then be put into the right folder, namely IN THE FOLDER OF THE PLUGIN YOU ARE DEVELOPING:
-#     pymodaq_plugins_my_plugin/daq_move_plugins
+from pymodaq_plugins_dilor.hardware.dilor_drive import DilorDrive
+from pymodaq_plugins_dilor.hardware.z40_mechanics_mock import Z40MechanicsMock
 
 
-class DAQ_Move_Template(DAQ_Move_base):
-    """ Instrument plugin class for an actuator.
-    
-    This object inherits all functionalities to communicate with PyMoDAQ’s DAQ_Move module through inheritance via
-    DAQ_Move_base. It makes a bridge between the DAQ_Move module and the Python wrapper of a particular instrument.
-
-    TODO Complete the docstring of your plugin with:
-        * The set of controllers and actuators that should be compatible with this instrument plugin.
-        * With which instrument and controller it has been tested.
-        * The version of PyMoDAQ during the test.
-        * The version of the operating system.
-        * Installation instructions: what manufacturer’s drivers should be installed to make it run?
+class DAQ_Move_Dilor(DAQ_Move_base):
+    """ PyMoDAQ actuator of the grating drive of the Dilor spectrometers: a stepper motor driven by an Arduino,
+    positioned on the reading of a HEIDENHAIN optical ruler read by an IK 220 card. The position is the reading of
+    the ruler, in mm.
 
     Attributes:
     -----------
-    controller: object
-        The particular object that allow the communication with the hardware, in general a python wrapper around the
-         hardware library.
-         
-    # TODO add your particular attributes here if any
-
+    controller: DilorDrive
+        Grating drive, with the motor (Arduino or Z40MechanicsMock) and the ruler (IK220 or IK220Mock).
     """
-    is_multiaxes = False  # TODO for your plugin set to True if this plugin is controlled for a multiaxis controller
-    _axis_names: Union[List[str], Dict[str, int]] = ['Axis1', 'Axis2']  # TODO for your plugin: complete the list
-    _controller_units: Union[str, List[str]] = 'mm'  # TODO for your plugin: put the correct unit here, it could be
-    # TODO  a single str (the same one is applied to all axes) or a list of str (as much as the number of axes)
-    _epsilons: Union[float, List[float]] = 0.1  # TODO replace this by a value that is correct depending on your controller
-    # TODO it could be a single float of a list of float (as much as the number of axes)
-    # _epsilons is the initial default value for the epsilon parameter allowing pymodaq to know if the controller reached
-    # the target value. It is the developer responsibility to put here a meaningful value
+    is_multiaxes = False
+    _axis_names = ['Grating']
+    _controller_units = 'mm'
+    _epsilons = GlobalConfig()('dilor', 'drive', 'tolerance_mm')
 
+    data_actuator_type = DataActuatorType.DataActuator
+    ui_type = UiType.NONE
+    has_encoder = True
 
-    data_actuator_type = DataActuatorType.DataActuator  # keep this line: move_abs / move_rel receive a DataActuator (with
-    # units) and get_actuator_value returns one. The default of the PyMoDAQ base class is DataActuatorType.float, only
-    # kept for old plugins (a plain float in the axis unit is exchanged instead): do not remove this line, and do not
-    # use DataActuatorType.float in a new plugin.
-
-    #todo: set the correct values for these two variables (pymodaq>5.3.0 only, if developing using lower version, just
-    # remove the two lines)
-    ui_type = UiType.NONE  # should precise (force if possible) what should be the ui type to be used with this
-    # actuator. If NONE, PyMoDAQ will use the default ui type (see preferences).
-    has_encoder = True  # tell PyMoDAQ if this actuator is able to set an absolute position and read the controller
-    # value. If False, you should consider having ui_type = UiType.RELATIVE
-
-
-    params = [   # TODO for your custom plugin: elements to be added here as dicts in order to control your custom stage
-                ] + comon_parameters_fun(axis_names=_axis_names)
+    params = [
+    ] + comon_parameters_fun(axis_names=_axis_names)
 
     def ini_attributes(self):
         #  TODO declare the type of the wrapper (and assign it to self.controller) you're going to use for easy
