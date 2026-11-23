@@ -117,25 +117,19 @@ class DAQ_Move_Dilor(DAQ_Move_base):
 
     def close(self):
         """Terminate the communication protocol"""
-        ## TODO for your custom plugin
-        raise NotImplementedError  # when writing your own plugin remove this line
-        # only the master owns the controller (a slave must not close the shared one) and ini_stage/ini_detector may
-        # have failed before creating it, so close can be called while self.controller is still None
         if self.is_master and self.controller is not None:
-            #  self.controller.your_method_to_terminate_the_communication()  # when writing your own plugin replace this line
-            ...
+            self.controller.stop()
+            self.controller.motor.shutdown()
+            self.controller = None
 
     def get_actuator_value(self) -> DataActuator:
         """Get the current value from the hardware with scaling conversion.
 
         Returns
         -------
-        float: The position obtained after scaling conversion.
+        DataActuator: The position read on the ruler, in mm, after scaling conversion.
         """
-        ## TODO for your custom plugin
-        raise NotImplementedError  # when writing your own plugin remove this line
-        pos = DataActuator(data=self.controller.your_method_to_get_the_actuator_value(),  # when writing your own plugin replace this line
-                           units=self.axis_unit)
+        pos = DataActuator(data=self.controller.get_position(), units=self.axis_unit)
         pos = self.get_position_with_scaling(pos)
         return pos
 
