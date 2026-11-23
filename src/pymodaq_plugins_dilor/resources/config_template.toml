@@ -8,7 +8,7 @@ direction_pin = 3  # pin of the direction signal of the driver
 enable_pin = 7  # pin of the enable signal of the driver (default of the Arduino class, to check on the Z40)
 
 [drive]
-step_mm = 0.49e-3  # displacement of the ruler for one motor step, in mm (absolute value)
+step_mm = 0.4963e-3  # displacement of the ruler for one motor step, in mm, measured on the Z40 with the ruler
 direction = -1  # sign of the ruler displacement for positive motor steps
 approach = 1  # sign of the motor steps used to reach the target
 tolerance_mm = 0.5e-3  # default epsilon of the actuator
