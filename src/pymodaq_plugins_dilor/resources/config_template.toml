@@ -1,1 +1,21 @@
 title = 'Configuration file of the plugin pymodaq_plugins_dilor'
+
+[actuator]
+mode = 'MOCK'  # 'MOCK': simulated mechanics and ruler, 'Z40': Arduino and IK 220 card
+com_port = 'COM3'  # serial port of the Arduino, to set in the local configuration file
+pulse_pin = 4  # pin of the step (pulse) signal of the driver
+direction_pin = 3  # pin of the direction signal of the driver
+enable_pin = 7  # pin of the enable signal of the driver (default of the Arduino class, to check on the Z40)
+
+[drive]
+step_mm = 0.49e-3  # displacement of the ruler for one motor step, in mm (absolute value)
+direction = -1  # sign of the ruler displacement for positive motor steps
+approach = 1  # sign of the motor steps used to reach the target
+tolerance_mm = 0.5e-3  # default epsilon of the actuator
+max_speed = 200  # motor speed, in steps per second
+max_corrections = 10
+overshoot_steps = 20  # steps beyond a target that is behind, and steps of the backlash take up
+
+[mock]
+step_mm = 0.49e-3  # true step of the simulated mechanics, in mm of ruler
+backlash_mm = 1.3e-3  # backlash of the simulated mechanics, in mm of ruler
