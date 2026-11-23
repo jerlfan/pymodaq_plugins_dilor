@@ -163,23 +163,14 @@ class DAQ_Move_Dilor(DAQ_Move_base):
         Parameters
         ----------
         value: DataActuator
-            Absolute target, with units. (With the backcompatibility DataActuatorType.float it would be a plain float,
-            already expressed in the axis unit, but new plugins should not use it.)
+            Absolute target, with units
         """
-
-        value = self.check_bound(value)  #if user checked bounds, the defined bounds are applied here
+        value = self.check_bound(value)  # if user checked bounds, the defined bounds are applied here
         self.target_value = value
         value = self.set_position_with_scaling(value)  # apply scaling if the user specified one
-        ## TODO for your custom plugin
-        # IMPORTANT: the controller only understands its own units. Always send value.value(self.axis_unit), it returns
-        # the magnitude expressed in the unit of this axis (the one of _controller_units, 'mm' here). PyMoDAQ already
-        # converts the target to the axis unit before calling move_abs, but value.value() alone is just the magnitude
-        # in whatever unit `value` carries (1 cm gives 1.0, not 10.0): value.value(self.axis_unit) guards against a
-        # mistake, and keeps the plugin correct when move_abs is called from elsewhere with another unit.
-        # (axis_unit is the unit of the current axis, axis_units the list/dict of the units of all the axes.)
-        raise NotImplementedError  # when writing your own plugin remove this line
-        self.controller.your_method_to_set_an_absolute_value(value.value(self.axis_unit))  # when writing your own plugin replace this line
-        self.emit_status(ThreadCommand('Update_Status', ['Some info you want to log']))
+        self.controller.tolerance_mm = self.epsilon
+        self.controller.move_to(value.value(self.axis_unit))
+        self.emit_status(ThreadCommand('Update_Status', [f'Moving to {value.value(self.axis_unit):.5f} mm']))
 
     def move_rel(self, value: DataActuator):
         """ Move the actuator to the relative target actuator value defined by value
@@ -187,32 +178,16 @@ class DAQ_Move_Dilor(DAQ_Move_base):
         Parameters
         ----------
         value: DataActuator
-            Relative displacement, with units (convert it with value.value(self.axis_unit) before sending it to the
-            controller, see move_abs).
+            Relative displacement, with units
         """
         value = self.check_bound(self.current_value + value) - self.current_value
         self.target_value = value + self.current_value
-        value = self.set_position_relative_with_scaling(value)
-
-        ## TODO for your custom plugin
-        # IMPORTANT: send value.value(self.axis_unit), not value.value(): the controller only understands its own units
-        raise NotImplementedError  # when writing your own plugin remove this line
-        self.controller.your_method_to_set_a_relative_value(value.value(self.axis_unit))  # when writing your own plugin replace this line
-        self.emit_status(ThreadCommand('Update_Status', ['Some info you want to log']))
+        self.move_abs(self.target_value)
 
     def move_home(self):
-        """Call the reference method of the controller
-
-        Contrary to move_abs and move_rel, PyMoDAQ does not poll the position to know when the homing is finished.
-        Whether this method blocks until the actuator is at home or only starts the homing (asynchronous), the plugin
-        has to call self.move_done() when the homing process ends, otherwise PyMoDAQ keeps waiting for it.
-        """
-
-        ## TODO for your custom plugin
-        raise NotImplementedError  # when writing your own plugin remove this line
-        self.controller.your_method_to_get_to_a_known_reference()  # when writing your own plugin replace this line
-        self.emit_status(ThreadCommand('Update_Status', ['Some info you want to log']))
-        self.move_done()  # blocking homing: call it here. Asynchronous homing: call it once the controller reports the end
+        """ No homing: the ruler is absolute, its reading is always the true position """
+        self.emit_status(ThreadCommand('Update_Status', ['No home for the Dilor drive: the ruler is absolute']))
+        self.move_done()
 
     def stop_motion(self):
         """Stop the actuator and emits move_done signal"""
