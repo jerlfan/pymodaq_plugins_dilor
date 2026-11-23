@@ -9,6 +9,8 @@ makes it progress and tells when it is finished.
 To cancel the backlash, the target is always reached with motor steps of the same sign, the approach direction.
 """
 
+import time
+
 
 class DilorDrive:
 
@@ -49,6 +51,17 @@ class DilorDrive:
         """ Start a move of the motor by a number of steps from its current position """
         self._motor_target = self.motor.get_stepper_position() + steps
         self.motor.move_stepper_to_position(self._motor_target, max_speed=self.max_speed)
+
+    def take_up_backlash(self, timeout_s=5.):
+        """ Do overshoot_steps steps in the approach direction and wait for the end, so that the screw then pushes the
+        carriage on the side of the approach direction. To call once, after the initialization of the motor """
+        self._send_steps(self.approach * self.overshoot_steps)
+        end = time.perf_counter() + timeout_s
+        while self.motor.get_stepper_position() != self._motor_target:
+            if time.perf_counter() > end:
+                self.motor.stop_stepper()
+                raise TimeoutError('The motor did not finish taking up the backlash')
+            time.sleep(0.01)
 
     def move_to(self, target_mm: float):
         """ Start a move to a target position of the ruler, in mm, without waiting for the end """
