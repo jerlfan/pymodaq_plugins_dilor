@@ -24,10 +24,9 @@ class DilorDrive:
         self.max_corrections = max_corrections  # maximum number of corrections of a move
         self.overshoot_steps = overshoot_steps  # steps beyond a target that is behind
         self.target_mm = None
-        self.status = 'idle'  # 'idle', 'moving', 'reached', 'resolution limit' or 'too many corrections'
+        self.status = 'idle'  # 'idle', 'moving', 'reached', 'stopped', 'resolution limit' or 'too many corrections'
         self.corrections = 0  # number of corrections of the current or last move
         self._motor_target = 0  # target of the motor, in steps
-
 
     def get_position(self) -> float:
         """ Return the position read on the ruler, in mm """
@@ -79,5 +78,7 @@ class DilorDrive:
         return False
 
     def stop(self):
-        """ Stop the current move """
-        pass
+        """ Stop the current move: the motor stops at once and no correction is sent """
+        self.motor.stop_stepper()
+        if self.status == 'moving':
+            self.status = 'stopped'
