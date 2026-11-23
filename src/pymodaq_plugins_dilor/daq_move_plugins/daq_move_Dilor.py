@@ -68,6 +68,8 @@ class DAQ_Move_Dilor(DAQ_Move_base):
         {'title': 'Last move', 'name': 'last_move', 'type': 'group', 'children': [
             {'title': 'Status:', 'name': 'status', 'type': 'str', 'value': '', 'readonly': True},
             {'title': 'Corrections:', 'name': 'corrections', 'type': 'int', 'value': 0, 'readonly': True},
+            {'title': 'Measured step (mm):', 'name': 'step_mm', 'type': 'float', 'decimals': 6, 'value': 0.,
+             'readonly': True},
         ]},
     ] + comon_parameters_fun(axis_names=_axis_names)
 
@@ -153,6 +155,7 @@ class DAQ_Move_Dilor(DAQ_Move_base):
             return False
         self.settings.child('last_move', 'status').setValue(self.controller.status)
         self.settings.child('last_move', 'corrections').setValue(self.controller.corrections)
+        self.settings.child('last_move', 'step_mm').setValue(self.controller.step_mm)
         if self.controller.status != 'reached':
             self.emit_status(ThreadCommand('Update_Status', [f'Move finished: {self.controller.status}']))
         return True
