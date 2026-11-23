@@ -133,18 +133,28 @@ class DAQ_Move_Dilor(DAQ_Move_base):
         pos = self.get_position_with_scaling(pos)
         return pos
 
-    def user_condition_to_reach_target(self) -> bool:
-        """ Implement a condition for exiting the polling mechanism and specifying that the
-        target value has been reached
+    def absolute_difference_condition_to_reach_target(self) -> bool:
+        """ The distance to the target is checked by the drive, with its tolerance: see user_condition_to_reach_target
 
-       Returns
+        Returns
+        -------
+        bool: always True, so that the end of the move is decided by user_condition_to_reach_target only
+        """
+        return True
+
+    def user_condition_to_reach_target(self) -> bool:
+        """ Make the move of the drive progress, and tell PyMoDAQ when it is finished
+
+        Returns
         -------
         bool: if True, PyMoDAQ considers the target value has been reached
         """
-        # TODO either delete this method if the usual polling is fine with you, but if need you can
-        #  add here some other condition to be fullfilled either a completely new one or
-        #  using or/and operations between the epsilon_bool and some other custom booleans
-        #  for a usage example see DAQ_Move_brushlessMotor from the Thorlabs plugin
+        if not self.controller.update():
+            return False
+        self.settings.child('last_move', 'status').setValue(self.controller.status)
+        self.settings.child('last_move', 'corrections').setValue(self.controller.corrections)
+        if self.controller.status != 'reached':
+            self.emit_status(ThreadCommand('Update_Status', [f'Move finished: {self.controller.status}']))
         return True
 
     def move_abs(self, value: DataActuator):
