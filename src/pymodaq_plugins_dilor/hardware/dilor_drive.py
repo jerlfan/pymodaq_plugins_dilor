@@ -13,7 +13,7 @@ To cancel the backlash, the target is always reached with motor steps of the sam
 class DilorDrive:
 
     def __init__(self, motor, ruler, step_mm=0.49e-3, direction=-1, approach=1, tolerance_mm=0.5e-3, max_speed=200,
-                 max_corrections=10):
+                 max_corrections=10, overshoot_steps=20):
         self.motor = motor
         self.ruler = ruler
         self.step_mm = step_mm  # displacement of the ruler for one motor step, in mm (absolute value)
@@ -22,10 +22,12 @@ class DilorDrive:
         self.tolerance_mm = tolerance_mm  # the move is finished when the ruler is within this distance of the target
         self.max_speed = max_speed  # motor speed, in steps per second
         self.max_corrections = max_corrections  # maximum number of corrections of a move
+        self.overshoot_steps = overshoot_steps  # steps beyond a target that is behind
         self.target_mm = None
         self.status = 'idle'  # 'idle', 'moving', 'reached', 'resolution limit' or 'too many corrections'
         self.corrections = 0  # number of corrections of the current or last move
         self._motor_target = 0  # target of the motor, in steps
+
 
     def get_position(self) -> float:
         """ Return the position read on the ruler, in mm """
@@ -37,6 +39,13 @@ class DilorDrive:
         error_mm = target_mm - self.get_position()
         return int(error_mm / (self.direction * self.step_mm))
 
+    def _with_overshoot(self, steps: int) -> int:
+        """ If the steps go against the approach direction, add the overshoot, so that the target is then reached
+        with steps in the approach direction """
+        if steps * self.approach < 0:
+            return steps - self.approach * self.overshoot_steps
+        return steps
+
     def _send_steps(self, steps: int):
         """ Start a move of the motor by a number of steps from its current position """
         self._motor_target = self.motor.get_stepper_position() + steps
@@ -47,7 +56,7 @@ class DilorDrive:
         self.target_mm = target_mm
         self.corrections = 0
         self.status = 'moving'
-        self._send_steps(self._steps_to(target_mm))
+        self._send_steps(self._with_overshoot(self._steps_to(target_mm)))
 
     def update(self) -> bool:
         """ Make the current move progress, and return True when it is finished """
@@ -66,7 +75,7 @@ class DilorDrive:
             self.status = 'too many corrections'
             return True
         self.corrections += 1
-        self._send_steps(steps)
+        self._send_steps(self._with_overshoot(steps))
         return False
 
     def stop(self):
