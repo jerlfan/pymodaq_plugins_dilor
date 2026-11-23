@@ -15,7 +15,7 @@ import time
 class DilorDrive:
 
     def __init__(self, motor, ruler, step_mm=0.49e-3, direction=-1, approach=1, tolerance_mm=0.5e-3, max_speed=200,
-                 max_corrections=10, overshoot_steps=20):
+                 max_corrections=10, overshoot_steps=20, min_steps_to_learn=20, learning_gain=0.5):
         self.motor = motor
         self.ruler = ruler
         self.step_mm = step_mm  # displacement of the ruler for one motor step, in mm (absolute value)
@@ -25,10 +25,15 @@ class DilorDrive:
         self.max_speed = max_speed  # motor speed, in steps per second
         self.max_corrections = max_corrections  # maximum number of corrections of a move
         self.overshoot_steps = overshoot_steps  # steps beyond a target that is behind
+        self.min_steps_to_learn = min_steps_to_learn  # minimum number of steps of a move to measure the true step
+        self.learning_gain = learning_gain  # fraction of the difference with the measured step applied to step_mm
         self.target_mm = None
         self.status = 'idle'  # 'idle', 'moving', 'reached', 'stopped', 'resolution limit' or 'too many corrections'
         self.corrections = 0  # number of corrections of the current or last move
         self._motor_target = 0  # target of the motor, in steps
+        self._steps = 0  # steps of the last move of the motor
+        self._previous_steps = 0  # steps of the move before
+        self._reading_before_mm = 0.  # ruler reading at the start of the last move of the motor
 
     def get_position(self) -> float:
         """ Return the position read on the ruler, in mm """
@@ -49,8 +54,19 @@ class DilorDrive:
 
     def _send_steps(self, steps: int):
         """ Start a move of the motor by a number of steps from its current position """
+        self._previous_steps, self._steps = self._steps, steps
+        self._reading_before_mm = self.get_position()
         self._motor_target = self.motor.get_stepper_position() + steps
         self.motor.move_stepper_to_position(self._motor_target, max_speed=self.max_speed)
+
+    def _learn_step(self):
+        """ Measure the true step on the ruler from the last move of the motor, and bring step_mm closer to it. Only
+        moves of at least min_steps_to_learn steps, in the same direction as the move before, are used: otherwise part
+        of the steps took up the backlash """
+        if abs(self._steps) < self.min_steps_to_learn or self._steps * self._previous_steps <= 0:
+            return
+        measured_mm = abs(self.get_position() - self._reading_before_mm) / abs(self._steps)
+        self.step_mm += self.learning_gain * (measured_mm - self.step_mm)
 
     def take_up_backlash(self, timeout_s=5.):
         """ Do overshoot_steps steps in the approach direction and wait for the end, so that the screw then pushes the
@@ -76,6 +92,7 @@ class DilorDrive:
             return True
         if self.motor.get_stepper_position() != self._motor_target:
             return False  # the motor is still moving
+        self._learn_step()
         if abs(self.target_mm - self.get_position()) <= self.tolerance_mm:
             self.status = 'reached'
             return True
