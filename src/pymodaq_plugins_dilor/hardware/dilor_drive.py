@@ -12,7 +12,8 @@ To cancel the backlash, the target is always reached with motor steps of the sam
 
 class DilorDrive:
 
-    def __init__(self, motor, ruler, step_mm=0.49e-3, direction=-1, approach=1, tolerance_mm=0.5e-3, max_speed=200):
+    def __init__(self, motor, ruler, step_mm=0.49e-3, direction=-1, approach=1, tolerance_mm=0.5e-3, max_speed=200,
+                 max_corrections=10):
         self.motor = motor
         self.ruler = ruler
         self.step_mm = step_mm  # displacement of the ruler for one motor step, in mm (absolute value)
@@ -20,19 +21,53 @@ class DilorDrive:
         self.approach = approach  # sign of the motor steps used to reach the target
         self.tolerance_mm = tolerance_mm  # the move is finished when the ruler is within this distance of the target
         self.max_speed = max_speed  # motor speed, in steps per second
+        self.max_corrections = max_corrections  # maximum number of corrections of a move
         self.target_mm = None
+        self.status = 'idle'  # 'idle', 'moving', 'reached', 'resolution limit' or 'too many corrections'
+        self.corrections = 0  # number of corrections of the current or last move
+        self._motor_target = 0  # target of the motor, in steps
 
     def get_position(self) -> float:
         """ Return the position read on the ruler, in mm """
         return self.ruler.get_axis_position()
 
+    def _steps_to(self, target_mm: float) -> int:
+        """ Number of motor steps to go from the ruler reading to the target, truncated towards zero so that the
+        target is never passed """
+        error_mm = target_mm - self.get_position()
+        return int(error_mm / (self.direction * self.step_mm))
+
+    def _send_steps(self, steps: int):
+        """ Start a move of the motor by a number of steps from its current position """
+        self._motor_target = self.motor.get_stepper_position() + steps
+        self.motor.move_stepper_to_position(self._motor_target, max_speed=self.max_speed)
+
     def move_to(self, target_mm: float):
         """ Start a move to a target position of the ruler, in mm, without waiting for the end """
-        pass
+        self.target_mm = target_mm
+        self.corrections = 0
+        self.status = 'moving'
+        self._send_steps(self._steps_to(target_mm))
 
     def update(self) -> bool:
         """ Make the current move progress, and return True when it is finished """
-        return True
+        if self.status != 'moving':
+            return True
+        if self.motor.get_stepper_position() != self._motor_target:
+            return False  # the motor is still moving
+        if abs(self.target_mm - self.get_position()) <= self.tolerance_mm:
+            self.status = 'reached'
+            return True
+        steps = self._steps_to(self.target_mm)
+        if steps == 0:
+            self.status = 'resolution limit'
+            return True
+        if self.corrections >= self.max_corrections:
+            self.status = 'too many corrections'
+            return True
+        self.corrections += 1
+        self._send_steps(steps)
+        return False
 
     def stop(self):
         """ Stop the current move """
